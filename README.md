@@ -123,7 +123,7 @@ mens-fashion-store/
 | **Phase 1** | Foundation, Crimson Terminal Design System, Normalized 3NF Prisma Schema & `Mens-wear-db` Seed | Complete |
 | **Phase 2** | Backend Services, Zod Validations, Rate Limiting & Auth Endpoints | Complete |
 | **Phase 3** | Public Storefront — Homepage, Navigation, Catalog, PDP & Search | Complete |
-| **Phase 4** | Public Storefront — Cart, Wishlist, Checkout & Customer Account | Pending |
+| **Phase 4** | Public Storefront — Cart, Wishlist, Checkout & Customer Account | Complete |
 | **Phase 5** | Admin Panel — Auth, Real Analytics Dashboard, Products, Categories, Collections & Inventory | Pending |
 | **Phase 6** | Admin Panel — Orders, Customers, Coupons, Homepage CMS & Store Settings | Pending |
 | **Phase 7** | Unit, Integration & E2E Testing, SEO, Accessibility & Performance | Pending |
