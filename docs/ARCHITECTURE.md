@@ -137,10 +137,10 @@ mens-fashion-store/
 - **Referential Integrity & Deletion Strategy**:
   - Soft-archival (`status = ARCHIVED` or `isActive = false`) for products/users referenced by historical orders.
   - Explicit RESTRICT / safe checks on `Category` deletion when products or child categories exist.
-  - Order items store immutable snapshots (`productName`, `variantSku`, `size`, `color`, `unitPrice`, `lineTotal`) so catalog edits never alter past orders.
-- **Indexes & Uniqueness**: Unique constraints on `User.email`, `Product.slug`, `Product.sku`, `ProductVariant.sku`, `Category.slug`, `Collection.slug`, `Coupon.code`, `Order.orderNumber`, plus composite indexes on filter/join keys.
+   - Order items store immutable snapshots (`productName`, `variantSku`, `sizeName`, `colorName`, `imageUrl`, `unitPrice`, `quantity`) so catalog edits never alter past orders.
+- **Indexes & Uniqueness**: Unique constraints on `User.email`, `Product.slug`, `Product.sku`, `ProductVariant.sku`, `SizeOption.code`, `ColorOption.name`, `Category.slug`, `Collection.slug`, `Coupon.code`, `Order.orderNumber`, plus composite indexes on filter/join keys.
 
-### 3.2 Normalized Entity Groups
+### 3.2 Normalized Entity Groups (1NF / 2NF / 3NF)
 
 1. **Identity & Access**
    - `User` (`id`, `email`, `name`, `phone`, `passwordHash`, `role` [`CUSTOMER` | `ADMIN`], `isActive`, `emailVerifiedAt`, `createdAt`, `updatedAt`)
@@ -151,9 +151,11 @@ mens-fashion-store/
 
 2. **Catalog & Merchandising**
    - `Category` (`id`, `name`, `slug`, `description`, `imageUrl`, `parentId` self-relation, `sortOrder`, `isActive`)
-   - `Product` (`id`, `name`, `slug`, `sku`, `description`, `fabric`, `material`, `careInstructions`, `specifications` Json, `price`, `originalPrice`, `status` [`DRAFT` | `PUBLISHED` | `ARCHIVED`], `isFeatured`, `seoTitle`, `seoDescription`, `categoryId`, `subcategoryId`)
+   - `SizeOption` (`id`, `name`, `code`, `sortOrder`) & `ColorOption` (`id`, `name`, `hexCode`)
+   - `Product` (`id`, `name`, `slug`, `sku`, `description`, `fabric`, `material`, `careInstructions`, `price`, `originalPrice`, `status` [`DRAFT` | `PUBLISHED` | `ARCHIVED`], `isFeatured`, `seoTitle`, `seoDescription`, `categoryId`)
+   - `ProductSpecification` (`id`, `productId`, `specKey`, `specValue`, `sortOrder`) — unique `(productId, specKey)`
    - `ProductImage` (`id`, `productId`, `url`, `altText`, `sortOrder`, `isPrimary`)
-   - `ProductVariant` (`id`, `productId`, `sku`, `size`, `color`, `colorHex`, `priceOverride`, `stock`, `lowStockThreshold`, `isActive`) — unique `(productId, size, color)`
+   - `ProductVariant` (`id`, `productId`, `sizeId`, `colorId`, `sku`, `priceOverride`, `stock`, `lowStockThreshold`, `isActive`) — unique `(productId, sizeId, colorId)`
    - `Collection` (`id`, `name`, `slug`, `description`, `imageUrl`, `sortOrder`, `isActive`)
    - `CollectionProduct` (`collectionId`, `productId`, `sortOrder`)
    - `ProductReview` (`id`, `productId`, `userId`, `rating`, `title`, `comment`, `isVerifiedPurchase`, `isApproved`, `createdAt`)
@@ -162,25 +164,27 @@ mens-fashion-store/
    - `Wishlist` (`id`, `userId`) & `WishlistItem` (`id`, `wishlistId`, `productId`) — unique `(wishlistId, productId)`
    - `RecentlyViewedProduct` (`id`, `userId`, `productId`, `viewedAt`)
    - `Cart` (`id`, `userId?`, `guestToken?`, `couponId?`, `updatedAt`)
-   - `CartItem` (`id`, `cartId`, `productId`, `variantId`, `quantity`) — unique `(cartId, variantId)`
+   - `CartItem` (`id`, `cartId`, `variantId`, `quantity`) — unique `(cartId, variantId)`
 
 4. **Promotions, Orders & Inventory Audit**
-   - `Coupon` (`id`, `code`, `description`, `discountType` [`PERCENTAGE` | `FIXED`], `discountValue`, `minOrderAmount`, `maxDiscountAmount`, `usageLimit`, `perCustomerLimit`, `usedCount`, `startsAt`, `expiresAt`, `isActive`)
+   - `Coupon` (`id`, `code`, `description`, `discountType` [`PERCENTAGE` | `FIXED`], `discountValue`, `minOrderAmount`, `maxDiscountAmount`, `usageLimit`, `perCustomerLimit`, `startsAt`, `expiresAt`, `isActive`)
    - `CouponUsage` (`id`, `couponId`, `userId`, `orderId`, `usedAt`)
-   - `Order` (`id`, `orderNumber`, `userId`, `status`, `paymentStatus`, `paymentMethod`, `subtotal`, `discountAmount`, `shippingAmount`, `taxAmount`, `totalAmount`, `couponCode`, `shippingAddress` Json, `internalNotes`, `placedAt`)
-   - `OrderItem` (`id`, `orderId`, `productId`, `variantId`, `productName`, `variantSku`, `size`, `color`, `imageUrl`, `unitPrice`, `quantity`, `lineTotal`)
+   - `Order` (`id`, `orderNumber`, `userId`, `status`, `subtotal`, `discountAmount`, `shippingAmount`, `taxAmount`, `totalAmount`, `internalNotes`, `placedAt`)
+   - `OrderShippingAddress` (`id`, `orderId`, `fullName`, `phone`, `line1`, `line2`, `city`, `state`, `postalCode`, `country`)
+   - `OrderItem` (`id`, `orderId`, `productId`, `variantId`, `productName`, `variantSku`, `sizeName`, `colorName`, `imageUrl`, `unitPrice`, `quantity`)
    - `PaymentRecord` (`id`, `orderId`, `method`, `status` [`PENDING` | `AWAITING_CONFIRMATION` | `PAID` | `FAILED` | `REFUNDED`], `amount`, `reference`, `notes`, `updatedAt`)
    - `OrderStatusHistory` (`id`, `orderId`, `fromStatus`, `toStatus`, `note`, `changedByUserId`, `createdAt`)
    - `CancellationRequest` (`id`, `orderId`, `userId`, `reason`, `status` [`PENDING` | `APPROVED` | `REJECTED`], `adminNote`, `reviewedAt`)
-   - `ReturnRequest` (`id`, `orderId`, `userId`, `reason`, `items` Json, `status` [`PENDING` | `APPROVED` | `REJECTED` | `COMPLETED`], `adminNote`, `reviewedAt`)
-   - `InventoryMovement` (`id`, `variantId`, `delta`, `previousStock`, `newStock`, `reason` [`RESTOCK` | `ADJUSTMENT` | `ORDER_PLACED` | `ORDER_CANCELLED` | `RETURN_APPROVED`], `referenceId`, `actorUserId`, `note`, `createdAt`)
+   - `ReturnRequest` (`id`, `orderId`, `userId`, `reason`, `status` [`PENDING` | `APPROVED` | `REJECTED` | `COMPLETED`], `adminNote`, `reviewedAt`)
+   - `ReturnRequestItem` (`id`, `returnRequestId`, `orderItemId`, `quantity`, `reasonDetail`) — unique `(returnRequestId, orderItemId)`
+   - `InventoryMovement` (`id`, `variantId`, `delta`, `balanceAfter`, `reason` [`RESTOCK` | `ADJUSTMENT` | `ORDER_PLACED` | `ORDER_CANCELLED` | `RETURN_APPROVED`], `referenceId`, `actorUserId`, `note`, `createdAt`)
 
 5. **CMS, Marketing & Administration**
-   - `HomepageSection` (`id`, `key`, `title`, `subtitle`, `content` Json, `sortOrder`, `isVisible`)
+   - `HomepageSection` (`id`, `key`, `title`, `subtitle`, `bodyText`, `imageUrl`, `ctaLabel`, `ctaHref`, `secondaryCtaLabel`, `secondaryCtaHref`, `sortOrder`, `isVisible`)
    - `PromotionalBanner` (`id`, `title`, `subtitle`, `ctaLabel`, `ctaHref`, `imageUrl`, `placement`, `sortOrder`, `isActive`)
    - `NewsletterSubscriber` (`id`, `email`, `isActive`, `subscribedAt`)
    - `StoreSettings` (`id`, `brandName`, `contactEmail`, `contactPhone`, `storeAddress`, `currencyCode`, `currencySymbol`, `taxRatePercent`, `freeShippingThreshold`, `defaultShippingFee`, `defaultLowStockThreshold`, `returnWindowDays`)
-   - `AdminActivityLog` (`id`, `adminUserId`, `action`, `entityType`, `entityId`, `metadata` Json, `createdAt`)
+   - `AdminActivityLog` (`id`, `adminUserId`, `action`, `entityType`, `entityId`, `details`, `createdAt`)
 
 ---
 

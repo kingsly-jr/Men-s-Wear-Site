@@ -66,7 +66,48 @@ async function main() {
     },
   });
 
-  // 3. Initial 11 Categories
+  // 3. Normalized Size & Color Lookups
+  const sizeDefinitions = [
+    { name: "S", code: "S", sortOrder: 1 },
+    { name: "M", code: "M", sortOrder: 2 },
+    { name: "L", code: "L", sortOrder: 3 },
+    { name: "XL", code: "XL", sortOrder: 4 },
+    { name: "30", code: "30", sortOrder: 5 },
+    { name: "32", code: "32", sortOrder: 6 },
+    { name: "34", code: "34", sortOrder: 7 },
+    { name: "One Size", code: "OS", sortOrder: 8 },
+  ];
+
+  const sizesByCode = new Map<string, string>();
+  for (const size of sizeDefinitions) {
+    const rec = await prisma.sizeOption.upsert({
+      where: { code: size.code },
+      update: { name: size.name, sortOrder: size.sortOrder },
+      create: size,
+    });
+    sizesByCode.set(size.code, rec.id);
+  }
+
+  const colorDefinitions = [
+    { name: "Obsidian Black", hexCode: "#0A0A0A" },
+    { name: "Deep Crimson", hexCode: "#8B1A1A" },
+    { name: "Charcoal", hexCode: "#262626" },
+    { name: "Bone White", hexCode: "#F4F4F5" },
+    { name: "Onyx", hexCode: "#141414" },
+    { name: "Slate", hexCode: "#3F3F46" },
+  ];
+
+  const colorsByName = new Map<string, string>();
+  for (const color of colorDefinitions) {
+    const rec = await prisma.colorOption.upsert({
+      where: { name: color.name },
+      update: { hexCode: color.hexCode },
+      create: color,
+    });
+    colorsByName.set(color.name, rec.id);
+  }
+
+  // 4. Initial 11 Categories
   const categoryDefinitions = [
     {
       name: "T-Shirts",
@@ -174,7 +215,7 @@ async function main() {
     categoriesBySlug.set(cat.slug, record.id);
   }
 
-  // 4. Initial 5 Collections
+  // 5. Initial 5 Collections
   const collectionDefinitions = [
     {
       name: "Everyday Essentials",
@@ -234,7 +275,7 @@ async function main() {
     collectionsBySlug.set(col.slug, record.id);
   }
 
-  // 5. Initial Catalog Products & Variants
+  // 6. Initial Catalog Products, Specifications & Variants
   const productSeeds = [
     {
       name: "Obsidian Heavyweight Box Tee",
@@ -250,14 +291,19 @@ async function main() {
       price: 1899,
       originalPrice: 2499,
       isFeatured: true,
+      specs: [
+        { specKey: "Fit", specValue: "Boxy Architectural" },
+        { specKey: "Weight", specValue: "280 GSM" },
+        { specKey: "Collar", specValue: "1-inch Mock Rib" },
+      ],
       images: [
         "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
         "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=900&q=80",
       ],
       variants: [
-        { sku: "CT-TEE-001-BLK-M", size: "M", color: "Obsidian Black", colorHex: "#0A0A0A", stock: 18 },
-        { sku: "CT-TEE-001-BLK-L", size: "L", color: "Obsidian Black", colorHex: "#0A0A0A", stock: 14 },
-        { sku: "CT-TEE-001-CRM-L", size: "L", color: "Deep Crimson", colorHex: "#8B1A1A", stock: 9 },
+        { sku: "CT-TEE-001-BLK-M", sizeCode: "M", colorName: "Obsidian Black", stock: 18 },
+        { sku: "CT-TEE-001-BLK-L", sizeCode: "L", colorName: "Obsidian Black", stock: 14 },
+        { sku: "CT-TEE-001-CRM-L", sizeCode: "L", colorName: "Deep Crimson", stock: 9 },
       ],
     },
     {
@@ -274,14 +320,19 @@ async function main() {
       price: 3499,
       originalPrice: 4299,
       isFeatured: true,
+      specs: [
+        { specKey: "Fit", specValue: "Tailored Slim" },
+        { specKey: "Collar", specValue: "Structured Spread" },
+        { specKey: "Buttons", specValue: "Mother of Pearl" },
+      ],
       images: [
         "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=900&q=80",
         "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=900&q=80",
       ],
       variants: [
-        { sku: "CT-SHT-002-CHR-M", size: "M", color: "Charcoal", colorHex: "#262626", stock: 12 },
-        { sku: "CT-SHT-002-CHR-L", size: "L", color: "Charcoal", colorHex: "#262626", stock: 10 },
-        { sku: "CT-SHT-002-WHT-M", size: "M", color: "Bone White", colorHex: "#F4F4F5", stock: 7 },
+        { sku: "CT-SHT-002-CHR-M", sizeCode: "M", colorName: "Charcoal", stock: 12 },
+        { sku: "CT-SHT-002-CHR-L", sizeCode: "L", colorName: "Charcoal", stock: 10 },
+        { sku: "CT-SHT-002-WHT-M", sizeCode: "M", colorName: "Bone White", stock: 7 },
       ],
     },
     {
@@ -298,13 +349,18 @@ async function main() {
       price: 8999,
       originalPrice: 10999,
       isFeatured: true,
+      specs: [
+        { specKey: "Silhouette", specValue: "Cropped Blouson" },
+        { specKey: "Lining", specValue: "Crimson Cupro Satin" },
+        { specKey: "Closure", specValue: "Two-Way Matte Zip" },
+      ],
       images: [
         "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=80",
         "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=900&q=80",
       ],
       variants: [
-        { sku: "CT-JKT-003-BLK-M", size: "M", color: "Onyx", colorHex: "#141414", stock: 6 },
-        { sku: "CT-JKT-003-BLK-L", size: "L", color: "Onyx", colorHex: "#141414", stock: 4 },
+        { sku: "CT-JKT-003-BLK-M", sizeCode: "M", colorName: "Onyx", stock: 6 },
+        { sku: "CT-JKT-003-BLK-L", sizeCode: "L", colorName: "Onyx", stock: 4 },
       ],
     },
     {
@@ -321,14 +377,19 @@ async function main() {
       price: 4599,
       originalPrice: 5499,
       isFeatured: true,
+      specs: [
+        { specKey: "Rise", specValue: "Mid-High" },
+        { specKey: "Leg", specValue: "Tapered Single-Pleat" },
+        { specKey: "Hem", specValue: "Blind Stitch" },
+      ],
       images: [
         "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=900&q=80",
         "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=900&q=80",
       ],
       variants: [
-        { sku: "CT-TRS-004-BLK-30", size: "30", color: "Matte Black", colorHex: "#0A0A0A", stock: 11 },
-        { sku: "CT-TRS-004-BLK-32", size: "32", color: "Matte Black", colorHex: "#0A0A0A", stock: 15 },
-        { sku: "CT-TRS-004-SLT-32", size: "32", color: "Slate", colorHex: "#3F3F46", stock: 8 },
+        { sku: "CT-TRS-004-BLK-30", sizeCode: "30", colorName: "Obsidian Black", stock: 11 },
+        { sku: "CT-TRS-004-BLK-32", sizeCode: "32", colorName: "Obsidian Black", stock: 15 },
+        { sku: "CT-TRS-004-SLT-32", sizeCode: "32", colorName: "Slate", stock: 8 },
       ],
     },
     {
@@ -345,14 +406,19 @@ async function main() {
       price: 3999,
       originalPrice: null,
       isFeatured: false,
+      specs: [
+        { specKey: "Weight", specValue: "500 GSM" },
+        { specKey: "Hood", specValue: "Double-Faced Structured" },
+        { specKey: "Pocket", specValue: "Concealed Seam Kangaroo" },
+      ],
       images: [
         "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=80",
         "https://images.unsplash.com/photo-1578768079052-aa76e52ff62e?auto=format&fit=crop&w=900&q=80",
       ],
       variants: [
-        { sku: "CT-HDY-005-BLK-M", size: "M", color: "Obsidian", colorHex: "#0A0A0A", stock: 14 },
-        { sku: "CT-HDY-005-BLK-L", size: "L", color: "Obsidian", colorHex: "#0A0A0A", stock: 12 },
-        { sku: "CT-HDY-005-BLK-XL", size: "XL", color: "Obsidian", colorHex: "#0A0A0A", stock: 7 },
+        { sku: "CT-HDY-005-BLK-M", sizeCode: "M", colorName: "Obsidian Black", stock: 14 },
+        { sku: "CT-HDY-005-BLK-L", sizeCode: "L", colorName: "Obsidian Black", stock: 12 },
+        { sku: "CT-HDY-005-BLK-XL", sizeCode: "XL", colorName: "Obsidian Black", stock: 7 },
       ],
     },
   ];
@@ -381,6 +447,13 @@ async function main() {
           status: ProductStatus.PUBLISHED,
           isFeatured: item.isFeatured,
           categoryId,
+          specifications: {
+            create: item.specs.map((spec, idx) => ({
+              specKey: spec.specKey,
+              specValue: spec.specValue,
+              sortOrder: idx,
+            })),
+          },
           images: {
             create: item.images.map((url, idx) => ({
               url,
@@ -390,15 +463,23 @@ async function main() {
             })),
           },
           variants: {
-            create: item.variants.map((variant) => ({
-              sku: variant.sku,
-              size: variant.size,
-              color: variant.color,
-              colorHex: variant.colorHex,
-              stock: variant.stock,
-              lowStockThreshold: 5,
-              isActive: true,
-            })),
+            create: item.variants.map((variant) => {
+              const sizeId = sizesByCode.get(variant.sizeCode);
+              const colorId = colorsByName.get(variant.colorName);
+              if (!sizeId || !colorId) {
+                throw new Error(
+                  `Missing size/color lookup for ${variant.sku}`
+                );
+              }
+              return {
+                sku: variant.sku,
+                sizeId,
+                colorId,
+                stock: variant.stock,
+                lowStockThreshold: 5,
+                isActive: true,
+              };
+            }),
           },
         },
         include: { variants: true },
@@ -427,8 +508,7 @@ async function main() {
           data: {
             variantId: variant.id,
             delta: variant.stock,
-            previousStock: 0,
-            newStock: variant.stock,
+            balanceAfter: variant.stock,
             reason: InventoryMovementReason.RESTOCK,
             actorUserId: adminUser.id,
             note: "Initial seed stock allocation",
@@ -438,7 +518,7 @@ async function main() {
     }
   }
 
-  // 6. Initial Coupon
+  // 7. Initial Coupon
   await prisma.coupon.upsert({
     where: { code: "CRIMSON15" },
     update: {},
@@ -455,21 +535,19 @@ async function main() {
     },
   });
 
-  // 7. Homepage Sections & Banner
+  // 8. Normalized Homepage Sections
   const sections = [
     {
       key: "HERO",
       title: "ARCHITECTURAL MENSWEAR. ENGINEERED IN OBSIDIAN.",
       subtitle:
         "Precision-cut silhouettes, heavyweight natural textiles, and monochrome discipline.",
-      content: {
-        primaryCtaLabel: "Shop New Arrivals",
-        primaryCtaHref: "/shop?sort=newest",
-        secondaryCtaLabel: "Explore Collections",
-        secondaryCtaHref: "/collections",
-        heroImageUrl:
-          "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?auto=format&fit=crop&w=1600&q=85",
-      },
+      ctaLabel: "Shop New Arrivals",
+      ctaHref: "/shop?sort=newest",
+      secondaryCtaLabel: "Explore Collections",
+      secondaryCtaHref: "/collections",
+      imageUrl:
+        "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?auto=format&fit=crop&w=1600&q=85",
       sortOrder: 1,
       isVisible: true,
     },
@@ -505,9 +583,8 @@ async function main() {
       key: "BRAND_STORY",
       title: "THE TERMINAL PHILOSOPHY",
       subtitle: "Zero excess. Intentional structure. Built to outlast trends.",
-      content: {
-        body: "Founded on the conviction that modern menswear demands architectural clarity, Crimson Terminal pairs heavyweight Japanese and Italian mills with sharp, minimalist tailoring.",
-      },
+      bodyText:
+        "Founded on the conviction that modern menswear demands architectural clarity, Crimson Terminal pairs heavyweight Japanese and Italian mills with sharp, minimalist tailoring.",
       sortOrder: 6,
       isVisible: true,
     },
