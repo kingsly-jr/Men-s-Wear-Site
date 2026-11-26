@@ -16,7 +16,10 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: {
     default: "CRIMSON TERMINAL — Precision Men's Fashion",
     template: "%s | CRIMSON TERMINAL",

@@ -55,8 +55,31 @@ export default async function ProductDetailPage({
     );
   }
 
+  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    sku: product.sku,
+    description: product.description,
+    image: product.images.map((img) => img.url),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "INR",
+      price: product.price,
+      availability:
+        totalStock > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+    },
+  };
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ProductDetailClient product={product} />
 
       {product.relatedProducts.length > 0 ? (
