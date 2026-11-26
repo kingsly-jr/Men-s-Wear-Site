@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
+import { AuthError, ForbiddenError } from "@/lib/constants/errors";
 import { prisma } from "@/lib/prisma";
 import { hashOpaqueToken, SESSION_COOKIE_NAME } from "./session";
 
@@ -80,10 +81,10 @@ export async function requireAdmin(redirectPath = "/admin/login"): Promise<Authe
 export async function assertAdminApi(): Promise<AuthenticatedUser> {
   const user = await getCurrentUser();
   if (!user) {
-    throw new Error("UNAUTHORIZED");
+    throw new AuthError();
   }
   if (user.role !== UserRole.ADMIN) {
-    throw new Error("FORBIDDEN");
+    throw new ForbiddenError();
   }
   return user;
 }

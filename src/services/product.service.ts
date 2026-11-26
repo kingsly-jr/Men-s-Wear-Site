@@ -830,3 +830,33 @@ export async function deleteOrArchiveProduct(
     return { archived: false };
   });
 }
+
+export async function getAdminProductById(productId: string) {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: {
+      images: { orderBy: { sortOrder: "asc" } },
+      specifications: { orderBy: { sortOrder: "asc" } },
+      variants: {
+        include: { size: true, color: true },
+        orderBy: [{ size: { sortOrder: "asc" } }, { color: { name: "asc" } }],
+      },
+      collections: { select: { collectionId: true } },
+    },
+  });
+
+  if (!product) {
+    throw new NotFoundError("Product not found.");
+  }
+
+  return {
+    ...product,
+    price: Number(product.price),
+    originalPrice: product.originalPrice ? Number(product.originalPrice) : null,
+    collectionIds: product.collections.map((c) => c.collectionId),
+    variants: product.variants.map((v) => ({
+      ...v,
+      priceOverride: v.priceOverride ? Number(v.priceOverride) : null,
+    })),
+  };
+}

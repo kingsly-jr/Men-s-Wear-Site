@@ -17,6 +17,8 @@ export async function getAdminDashboardAnalytics(params?: {
     recentOrders,
     ordersInWindow,
     topItems,
+    categoryProducts,
+    orderStatusGroups,
   ] = await Promise.all([
     prisma.order.aggregate({
       where: { status: { not: OrderStatus.CANCELLED } },
@@ -56,6 +58,23 @@ export async function getAdminDashboardAnalytics(params?: {
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
     }),
+    prisma.orderItem.findMany({
+      where: {
+        productId: { not: null },
+        order: { status: { not: OrderStatus.CANCELLED } },
+      },
+      select: {
+        quantity: true,
+        unitPrice: true,
+        product: {
+          select: { category: { select: { name: true } } },
+        },
+      },
+    }),
+    prisma.order.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    }),
   ]);
 
   const lowStockCount = lowStockVariants.filter(
@@ -69,6 +88,19 @@ export async function getAdminDashboardAnalytics(params?: {
     current.revenue += Number(order.totalAmount);
     current.orders += 1;
     dailyBuckets.set(key, current);
+  }
+
+  const categoryTotals = new Map<string, { categoryName: string; units: number; revenue: number }>();
+  for (const item of categoryProducts) {
+    const catName = item.product?.category.name ?? "Uncategorized";
+    const entry = categoryTotals.get(catName) ?? {
+      categoryName: catName,
+      units: 0,
+      revenue: 0,
+    };
+    entry.units += item.quantity;
+    entry.revenue += Number(item.unitPrice) * item.quantity;
+    categoryTotals.set(catName, entry);
   }
 
   return {
@@ -85,6 +117,13 @@ export async function getAdminDashboardAnalytics(params?: {
       productName: item.productName,
       unitsSold: item._sum.quantity ?? 0,
     })),
+    topCategories: Array.from(categoryTotals.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5),
+    orderStatusBreakdown: orderStatusGroups.map((g) => ({
+      status: g.status,
+      count: g._count.id,
+    })),
     recentOrders: recentOrders.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
@@ -93,7 +132,7 @@ export async function getAdminDashboardAnalytics(params?: {
       status: order.status,
       paymentStatus: order.paymentRecord?.status ?? "PENDING",
       totalAmount: Number(order.totalAmount),
-      placedAt: order.placedAt,
+      placedAt: order.placedAt.toISOString(),
     })),
   };
 }
